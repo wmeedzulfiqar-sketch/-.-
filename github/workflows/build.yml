@@ -1,0 +1,41 @@
+name: Build App to EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract ZIP
+        run: |
+          Expand-Archive -Path Aura_app.zip -DestinationPath ./app_source
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          cd app_source
+          pip install pyinstaller
+          # إذا عندك ملف requirements.txt جوه الـ zip، فعل هالسطر:
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          # إذا ماكو requirements، راح ننصب الأساسيات
+          pip install discord.py Flask
+
+      - name: Build EXE
+        run: |
+          cd app_source
+          # غير كلمة main.py لاسم الملف الأساسي اللي داخل الـ zip (مثلاً app.py أو bot.py)
+          pyinstaller --onefile --noconsole main.py
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aura-App
+          path: app_source/dist/*.exe
