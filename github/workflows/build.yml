@@ -1,41 +1,47 @@
-name: Build App to EXE
+name: Build Flutter APK from ZIP
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract ZIP
+      - name: Unzip Project
         run: |
-          Expand-Archive -Path Aura_app.zip -DestinationPath ./app_source
-          
-      - name: Setup Python
-        uses: actions/setup-python@v5
+          # غير اسم الملف إذا كان اسمه غير Aura_app.zip
+          unzip Aura_app.zip -d ./app_source
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          python-version: '3.10'
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
 
       - name: Install dependencies
         run: |
           cd app_source
-          pip install pyinstaller
-          # إذا عندك ملف requirements.txt جوه الـ zip، فعل هالسطر:
-          if (Test-Path requirements.txt) { pip install -r requirements.txt }
-          # إذا ماكو requirements، راح ننصب الأساسيات
-          pip install discord.py Flask
+          # بعض الملفات المضغوطة يكون داخلها مجلد ثاني، هذا السطر يتحقق ويدخل له
+          if [ -d "Aura_app" ]; then cd Aura_app; fi
+          flutter pub get
 
-      - name: Build EXE
+      - name: Build APK
         run: |
           cd app_source
-          # غير كلمة main.py لاسم الملف الأساسي اللي داخل الـ zip (مثلاً app.py أو bot.py)
-          pyinstaller --onefile --noconsole main.py
+          if [ -d "Aura_app" ]; then cd Aura_app; fi
+          flutter build apk --release
 
-      - name: Upload EXE
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Aura-App
-          path: app_source/dist/*.exe
+          name: Aura-App-APK
+          path: app_source/**/build/app/outputs/flutter-apk/app-release.apk
